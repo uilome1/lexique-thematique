@@ -243,7 +243,7 @@ const handleAddWord = async () => {
   }
 
   // 3. Mots proches : traduire terme FR→EN, puis chercher, puis traduire résultats EN→FR
-  let related = [];
+  let related: string[] = [];
   if (includeRelated) {
     // Traduire le terme français en anglais pour Datamuse
     const termEN = await fetchTranslateText(term); // "montagne" → "mountain"
