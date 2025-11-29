@@ -459,7 +459,7 @@ async function fetchTranslateTextReverse(text: string) {
       setMotInput(capitalized);
     }
   }}
-  type="button"
+  
   disabled={!motInput}
 >
   
