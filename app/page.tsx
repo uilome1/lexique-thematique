@@ -534,18 +534,18 @@ async function fetchTranslateTextReverse(text: string) {
               filteredEntries.map((entry) => (
                 <div key={entry.id} className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm transition-all duration-200 hover:shadow-md overflow-hidden">
                   {/* Header compact: mot + bouton Afficher */}
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-baseline gap-3">
-                      <h3 className="text-xl font-bold text-slate-900">{entry.mot}</h3>
-                      <span className="text-sm text-slate-500">({currentDossier})</span>
-                    </div>
-                   <button 
-  onClick={() => toggleShow(entry.id)} className="px-4 py-2 bg-slate-100 rounded text-slate-900 hover:bg-slate-200"
-  aria-label={`${entry.showDefinition ? "Masquer" : "Afficher"} la définition de ${entry.mot}`}
->
-  {entry.showDefinition ? "Masquer" : "Afficher"}
-</button>
-                  </div>
+                 <div className="flex flex-wrap justify-between items-center gap-2">
+  <div className="flex items-baseline gap-2">
+    <h3 className="text-xl font-bold text-slate-900 break-words">{entry.mot}</h3>
+  </div>
+  <button 
+    onClick={() => toggleShow(entry.id)} 
+    className="px-4 py-2 bg-slate-100 rounded text-slate-900 hover:bg-slate-200 whitespace-nowrap flex-shrink-0"
+    aria-label={`${entry.showDefinition ? "Masquer" : "Afficher"} la définition de ${entry.mot}`}
+  >
+    {entry.showDefinition ? "Masquer" : "Afficher"}
+  </button>
+</div>
 
                  {/* Contenu déroulant : tout le reste */}
 {entry.showDefinition && (
