@@ -532,7 +532,7 @@ async function fetchTranslateTextReverse(text: string) {
               <div className="bg-white p-6 rounded-lg border border-slate-200 text-slate-600">Aucune entrée.</div>
             ) : (
               filteredEntries.map((entry) => (
-                <div key={entry.id} className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm animate-fade">
+                <div key={entry.id} className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm transition-all duration-200 hover:shadow-md overflow-hidden">
                   {/* Header compact: mot + bouton Afficher */}
                   <div className="flex justify-between items-center">
                     <div className="flex items-baseline gap-3">
@@ -559,7 +559,7 @@ async function fetchTranslateTextReverse(text: string) {
 )}
 
     {/* Layout: définition + mots proches à gauche, boutons à droite */}
-    <div className="flex gap-4">
+    <div className="flex flex-col lg:flex-row gap-4 pt-4 border-t border-slate-200">
       {/* Colonne gauche : Définition + Mots proches */}
       <div className="flex-1 space-y-4">
         {/* Définition */}
