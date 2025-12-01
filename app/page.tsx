@@ -469,7 +469,7 @@ async function fetchTranslateTextReverse(text: string) {
   </button></div>
           <div className="mt-4 flex gap-3">
             <button
-              className="px-4 py-2 bg-emerald-600 text-white rounded disabled:opacity-90 hover:bg-green-500"
+              className="px-4 py-2 bg-green-900 text-white rounded disabled:opacity-90 hover:bg-green-700"
               onClick={handleAddWord}
               disabled={!currentDossier || !motInput.trim() || loading}
               type="button"
@@ -621,19 +621,19 @@ async function fetchTranslateTextReverse(text: string) {
       </div>
 
       {/* Colonne droite : Boutons en colonne */}
-      <div className="flex flex-col gap-2 min-w-fit">
+     <div className="flex flex-col gap-2 w-full lg:w-auto lg:min-w-fit">
   <h4 className="text-sm font-semibold text-slate-700 mb-1" lang="fr">Actions</h4>
   
   <button 
     onClick={() => toggleEditing(entry.id)} 
-    className="px-4 py-2 bg-amber-100 rounded text-slate-900 hover:bg-amber-200 text-sm whitespace-nowrap"
+    className="px-4 py-2 bg-amber-100 rounded text-slate-900 hover:bg-amber-200 text-sm whitespace-nowrap w-full lg:w-auto"
     aria-label={`Éditer la définition de ${entry.mot}`}
   >
           Éditer
         </button>
         <button 
           onClick={() => deleteEntry(entry.id)} 
-          className="px-4 py-2 bg-rose-100 rounded text-slate-900 hover:bg-rose-200 text-sm whitespace-nowrap"
+          className="px-4 py-2 bg-rose-100 rounded text-slate-900 hover:bg-rose-200 text-sm whitespace-nowrap w-full lg:w-auto"
           aria-label={`Supprimer l'entrée ${entry.mot}`}
         >
           Supprimer
@@ -649,7 +649,7 @@ async function fetchTranslateTextReverse(text: string) {
               return { ...prev, [currentDossier]: arr };
             });
           }}
-          className="px-4 py-2 bg-sky-100 rounded text-slate-900 hover:bg-sky-200 text-sm whitespace-nowrap"
+          className="px-4 py-2 bg-sky-100 rounded text-slate-900 hover:bg-sky-200 text-sm whitespace-nowrap w-full lg:w-auto"
           aria-label={`Traduire ${entry.mot} en anglais`}
         >
           Traduire (EN)
@@ -666,26 +666,26 @@ async function fetchTranslateTextReverse(text: string) {
         </button>
         <button
           onClick={() => window.open(`https://www.larousse.fr/dictionnaires/francais/${encodeURIComponent(entry.mot)}`, "_blank")}
-          className="px-3 py-1.5 bg-purple-100 rounded text-slate-900 hover:bg-purple-200 text-sm whitespace-nowrap"
+          className="px-3 py-1.5 bg-purple-100 rounded text-slate-900 hover:bg-purple-200 text-sm whitespace-nowrap w-full lg:w-auto"
         >
           Larousse
         </button>
         <button
           onClick={() => window.open(`https://www.universalis.fr/recherche/${encodeURIComponent(entry.mot)}`, "_blank")}
-          className="px-3 py-1.5 bg-purple-100 rounded text-slate-900 hover:bg-purple-200 text-sm whitespace-nowrap"
+          className="px-3 py-1.5 bg-purple-100 rounded text-slate-900 hover:bg-purple-200 text-sm whitespace-nowrap w-full lg:w-auto"
         >
           Encyclopédie Universalis
         </button>
          <button
           onClick={() => window.open(`https://openalex.org/works?page=1&filter=title_and_abstract.search:${encodeURIComponent(entry.mot)}`, "_blank")}
-          className="px-3 py-1.5 bg-purple-100 rounded text-slate-900 hover:bg-purple-200 text-sm whitespace-nowrap"
+          className="px-3 py-1.5 bg-purple-100 rounded text-slate-900 hover:bg-purple-200 text-sm whitespace-nowrap w-full lg:w-auto"
           aria-label={`Chercher ${entry.mot} dans la base OpenAlex`}
         >
           OpenAlex
         </button>
         <button
           onClick={() => window.open(`https://crisco4.unicaen.fr/des/synonymes/${encodeURIComponent(entry.mot)}`, "_blank")}
-          className="px-3 py-1.5 bg-purple-100 rounded text-slate-900 hover:bg-purple-200 text-sm whitespace-nowrap"
+          className="px-3 py-1.5 bg-purple-100 rounded text-slate-900 hover:bg-purple-200 text-sm whitespace-nowrap w-full lg:w-auto"
           aria-label={`Consulter les synonymes de ${entry.mot} sur Crisco`}
         >
           Synonymes avec Crisco
@@ -693,7 +693,7 @@ async function fetchTranslateTextReverse(text: string) {
        
         <button
           onClick={() => window.open(`https://context.reverso.net/traduction/anglais-francais/${encodeURIComponent(entry.mot)}`, "_blank")}
-          className="px-3 py-1.5 bg-purple-100 rounded text-slate-900 hover:bg-purple-200 text-sm whitespace-nowrap"
+          className="px-3 py-1.5 bg-purple-100 rounded text-slate-900 hover:bg-purple-200 text-sm whitespace-nowrap w-full lg:w-auto"
         >
           Reverso anglais
         </button>
