@@ -1,7 +1,7 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 
-const CLERK_KEY = 'pk_test_Y2hhcm1pbmctcHVwLTc4LmNsZXJrLmFjY291bnRzLmRldiQ' // ← Mettre ta clé ici
-
+const CLERK_PUBLISHABLE_KEY = 'pk_test_Y2hhcm1pbmctcHVwLTc4LmNsZXJrLmFjY291bnRzLmRldiQ' // ← Mettre ta clé ici
+const CLERK_SECRET_KEY = 'sk_test_z6Sr4WGwIe2qnSo5LpQwiqXDBldwqd88sCUoWKk8ZD'
 const isPublicRoute = createRouteMatcher([
   '/',
   '/app(.*)',
@@ -17,7 +17,8 @@ export default clerkMiddleware(
     }
   },
   {
-    publishableKey: CLERK_KEY,
+    publishableKey: CLERK_PUBLISHABLE_KEY,
+    secretKey: CLERK_SECRET_KEY,
   }
 )
 
