@@ -1,4 +1,8 @@
+// app/layout.tsx
+
 import type { Metadata } from "next";
+// Importez le ClerkProvider ici
+import { ClerkProvider } from '@clerk/nextjs'; 
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Inter } from 'next/font/google'
@@ -28,10 +32,13 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="fr">
-      <body className={inter.className}>
-        {children}
-      </body>
-    </html>
+    // On enveloppe le tout avec <ClerkProvider>
+    <ClerkProvider> 
+      <html lang="fr">
+        <body className={inter.className}>
+          {children}
+        </body>
+      </html>
+    </ClerkProvider> // <--- Le fournisseur de contexte est ici !
   )
 }
