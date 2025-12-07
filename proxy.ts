@@ -1,27 +1,18 @@
-
-
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 
-const CLERK_PUBLISHABLE_KEY = 'pk_test_Y2hhcm1pbmctcHVwLTc4LmNsZXJrLmFjY291bnRzLmRldiQ' // ← Mettre ta clé ici
-
+// Routes publiques (accessibles sans connexion)
 const isPublicRoute = createRouteMatcher([
-  '/',
-  '/app(.*)',
+  '/',           // Landing page
+  '/app(.*)',    // App accessible en mode hors ligne
   '/sign-in(.*)', 
   '/sign-up(.*)',
-  '/api(.*)',
 ])
 
-export default clerkMiddleware(
-  async (auth, request) => {
-    if (!isPublicRoute(request)) {
-      await auth.protect()
-    }
-  },
-  {
-    publishableKey: CLERK_PUBLISHABLE_KEY,
+export default clerkMiddleware(async (auth, request) => {
+  if (!isPublicRoute(request)) {
+    await auth.protect()
   }
-)
+})
 
 export const config = {
   matcher: [
