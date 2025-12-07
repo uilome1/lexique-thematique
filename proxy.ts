@@ -1,3 +1,5 @@
+process.env.CLERK_ENCRYPTION_KEY = 'UrIV/iv5wAjLxEqOwAS5CDxDizh9a3IiKV0v6kwc/wE='
+
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 
 const CLERK_PUBLISHABLE_KEY = 'pk_test_Y2hhcm1pbmctcHVwLTc4LmNsZXJrLmFjY291bnRzLmRldiQ' // ← Mettre ta clé ici
