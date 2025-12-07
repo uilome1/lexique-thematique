@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 
-// Middleware vide temporairement (bypass Clerk)
-export function middleware() {
+// Export default pour que Next.js le reconnaisse
+export default function proxy() {
   return NextResponse.next()
 }
 
