@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { ClerkProvider } from '@clerk/nextjs'
 import { frFR } from '@clerk/localizations'
 import type { Metadata } from "next";
