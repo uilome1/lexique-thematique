@@ -32,13 +32,13 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    // On enveloppe le tout avec <ClerkProvider>
-    <ClerkProvider> 
+    // AJOUTEZ CETTE PROPRIÉTÉ (PROP)
+    <ClerkProvider publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}> 
       <html lang="fr">
         <body className={inter.className}>
           {children}
         </body>
       </html>
-    </ClerkProvider> // <--- Le fournisseur de contexte est ici !
+    </ClerkProvider>
   )
 }
