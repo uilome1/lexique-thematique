@@ -8,8 +8,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY! 
 
 export async function getSupabaseClient() {
-  // 1. Récupérer le userId ET la fonction getToken
-  const { userId, getToken } = auth()
+  const { userId, getToken } = await auth()
   
   if (!userId) {
     // Si l'utilisateur n'est pas authentifié, on lève une erreur 401
