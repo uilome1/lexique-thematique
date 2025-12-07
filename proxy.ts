@@ -3,16 +3,23 @@ import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 // Routes publiques (accessibles sans connexion)
 const isPublicRoute = createRouteMatcher([
   '/',           // Landing page
-  '/app(.*)',    // App accessible en mode hors ligne
+  '/app(.*)',    // App accessible
   '/sign-in(.*)', 
   '/sign-up(.*)',
+  '/api(.*)',    // API routes publiques
 ])
 
-export default clerkMiddleware(async (auth, request) => {
-  if (!isPublicRoute(request)) {
-    await auth.protect()
+export default clerkMiddleware(
+  async (auth, request) => {
+    if (!isPublicRoute(request)) {
+      await auth.protect()
+    }
+  },
+  {
+    // Passer explicitement la clé
+    publishableKey: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
   }
-})
+)
 
 export const config = {
   matcher: [
