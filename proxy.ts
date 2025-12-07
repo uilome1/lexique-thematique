@@ -1,12 +1,13 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 
-// Routes publiques (accessibles sans connexion)
+const CLERK_KEY = 'pk_test_Y2hhcm1pbmctcHVwLTc4LmNsZXJrLmFjY291bnRzLmRldiQ' // ← Mettre ta clé ici
+
 const isPublicRoute = createRouteMatcher([
-  '/',           // Landing page
-  '/app(.*)',    // App accessible
+  '/',
+  '/app(.*)',
   '/sign-in(.*)', 
   '/sign-up(.*)',
-  '/api(.*)',    // API routes publiques
+  '/api(.*)',
 ])
 
 export default clerkMiddleware(
@@ -16,8 +17,7 @@ export default clerkMiddleware(
     }
   },
   {
-    // Passer explicitement la clé
-    publishableKey: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+    publishableKey: CLERK_KEY,
   }
 )
 
