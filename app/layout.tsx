@@ -31,7 +31,6 @@ export default function RootLayout({
 }) {
   return (
     <ClerkProvider 
-      publishableKey={CLERK_KEY}
       localization={frFR}
     >
       ...
