@@ -46,12 +46,15 @@ async function loadData() {
   
   try {
     // Charger les dossiers
-    const dossiersRes = await fetch('/api/dossiers');
+    const dossiersRes = await fetch('/api/dossiers', {
+    credentials: 'include' 
+});
     if (!dossiersRes.ok) throw new Error('Failed to fetch dossiers');
     const { data: dossiers } = await dossiersRes.json();
-    
     // Charger toutes les entries
-    const entriesRes = await fetch('/api/entries');
+    const entriesRes = await fetch('/api/entries', {
+    credentials: 'include' 
+});
     if (!entriesRes.ok) throw new Error('Failed to fetch entries');
     const { data: allEntries } = await entriesRes.json();
     
@@ -245,7 +248,8 @@ async function loadData() {
     const response = await fetch('/api/dossiers', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nom: d })
+      body: JSON.stringify({ nom: d }),
+      credentials: 'include'
     });
     
     if (!response.ok) {
