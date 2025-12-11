@@ -484,23 +484,22 @@ export default function Page() {
               </div>
 
               <div className="flex items-center gap-4">
-  {/* Optionnel, mais plus sûr pour éviter les problèmes d'hydratation subtils avec SignedIn/SignedOut */}
-  {user ? (
-    <UserButton 
-      appearance={{
-        elements: {
-          avatarBox: "w-10 h-10"
-        }
-      }}
-    />
-  ) : (
-    <Link href="/sign-in">
-      <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
-        Se connecter
-      </button>
-    </Link>
-  )}
-</div>
+            {user ? (
+              <UserButton 
+                appearance={{
+                  elements: {
+                    avatarBox: "w-10 h-10"
+                  }
+                }}
+              />
+            ) : (
+              <Link href="/sign-in">
+                <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+                  Se connecter
+                </button>
+              </Link>
+            )}
+          </div>
             </div>
           </nav>
 
