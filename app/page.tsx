@@ -1,18 +1,9 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { supabase } from '@/lib/supabase';
+import dynamic from 'next/dynamic';
 
-/**
- * Lexique v1 — Dossier obligatoire
- * - dossier must be set (create/select)
- * - search word (Wikipedia, Wiktionnaire)
- * - options: mots proches (Datamuse), traduire en anglais
- * - persistance per-dossier in localStorage
- * - edit / delete entries
- * - filter entries (search within selected dossier)
- */
-
-// Types
 type Entry = {
   id: string;
   mot: string;
@@ -32,11 +23,27 @@ function generateId() {
   }
   return Math.random().toString(36).slice(2, 9);
 }
+// Fonction pour obtenir/créer le user_id
+function getUserId(): string {
+  if (typeof window === 'undefined') return '';
+  
+  const existingId = localStorage.getItem('user_session_id');
+  
+  if (existingId) {
+    return existingId;
+  }
+  
+  const newId = generateId();
+  localStorage.setItem('user_session_id', newId);
+  console.log('📝 Nouvel ID utilisateur créé:', newId);
+  return newId;
+}
 
 export default function Page() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [dossierToDelete, setDossierToDelete] = useState<string | null>(null);
   const deleteModalRef = useRef<HTMLDivElement>(null);
+  const [userId, setUserId] = useState<string>('');
   // dossier management
   const [dossierInput, setDossierInput] = useState("");
   const [currentDossier, setCurrentDossier] = useState<string | null>(null);
@@ -54,33 +61,74 @@ export default function Page() {
   // filter in lexicon
   const [filterText, setFilterText] = useState("");
 
-  // load localStorage on mount
+  // NOUVEAU : Initialiser le userId au chargement
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(LS_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as Record<string, Entry[]>;
-        setStore(parsed);
-        setDossiersList(Object.keys(parsed));
-        if (Object.keys(parsed).length > 0 && !currentDossier) {
-          setCurrentDossier(Object.keys(parsed)[0]);
-        }
-      }
-    } catch (e) {
-      console.error("Erreur lecture localStorage", e);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const id = getUserId();
+  if (id) setUserId(id);
+}, []);
 
-  // persist store to localStorage
+  // NOUVEAU : Charger les données depuis Supabase
   useEffect(() => {
+    if (!userId) return;
+    
+    loadDataFromSupabase();
+  }, [userId]);
+
+  async function loadDataFromSupabase() {
+    if (!userId) return;
+    
     try {
-      localStorage.setItem(LS_KEY, JSON.stringify(store));
-      setDossiersList(Object.keys(store));
+      console.log('📥 Chargement depuis Supabase...');
+      
+      // Charger tous les dossiers
+      const { data: dossiers, error: dossiersError } = await supabase
+        .from('dossiers')
+        .select('*')
+        .eq('user_id', userId);
+      
+      if (dossiersError) throw dossiersError;
+      
+      // Charger toutes les entries
+      const { data: entries, error: entriesError } = await supabase
+        .from('entries')
+        .select('*')
+        .eq('user_id', userId);
+      
+      if (entriesError) throw entriesError;
+      
+      // Organiser les données par dossier
+      const newStore: Record<string, Entry[]> = {};
+      
+      dossiers?.forEach(d => {
+        const dossierId = d.id;
+        const dossierEntries = entries
+          ?.filter(e => e.dossier_id === dossierId)
+          .map(e => ({
+            id: e.id,
+            mot: e.mot,
+            definition: e.definition,
+            source: e.source,
+            traduction: e.traduction,
+            motsProches: e.mots_proches || [],
+            isEditing: false,
+            showDefinition: false,
+          })) || [];
+        
+        newStore[d.nom] = dossierEntries;
+      });
+      
+      setStore(newStore);
+      setDossiersList(Object.keys(newStore));
+      console.log('📋 dossiersList mis à jour:', Object.keys(newStore));
+      if (Object.keys(newStore).length > 0 && !currentDossier) {
+        setCurrentDossier(Object.keys(newStore)[0]);
+      }
+      
+      console.log('✅ Données chargées:', Object.keys(newStore).length, 'dossiers');
     } catch (e) {
-      console.error("Erreur sauvegarde localStorage", e);
+      console.error('❌ Erreur chargement Supabase:', e);
     }
-  }, [store]);
+  }
 // Fermer la modale avec la touche Échap
 useEffect(() => {
   const handleEsc = (e: KeyboardEvent) => {
@@ -207,84 +255,141 @@ async function fetchWiktionary(term: string) {
     }
   }
 
-  // --- Main action: ensure dossier is set, then search and add entry ---
-  const handleCreateOrSelectDossier = () => {
-    const d = dossierInput.trim();
-    if (!d) return;
-    setCurrentDossier(d);
-    if (!store[d]) {
-      setStore((s) => ({ ...s, [d]: [] }));
+  const handleCreateOrSelectDossier = async () => {
+  const d = dossierInput.trim();
+  if (!d || !userId) return;
+  
+  try {
+    // Vérifier si le dossier existe déjà localement
+    if (store[d]) {
+      setCurrentDossier(d);
+      setDossierInput("");
+      return;
     }
+    
+    console.log('📁 Création du dossier:', d);
+    
+    // Créer dans Supabase
+    const { data, error } = await supabase
+      .from('dossiers')
+      .insert({
+        user_id: userId,
+        nom: d
+      })
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('❌ Erreur création dossier:', error);
+      alert('Erreur lors de la création du dossier');
+      return;
+    }
+    
+    console.log('✅ Dossier créé dans Supabase:', data);
+    
+    // Mettre à jour le state local
+    setStore((s) => ({ ...s, [d]: [] }));
+    setCurrentDossier(d);
     setDossierInput("");
-  };
+    
+    // Recharger depuis Supabase pour être sûr
+    await loadDataFromSupabase();
+    
+  } catch (e) {
+    console.error('❌ Erreur:', e);
+    alert('Erreur lors de la création du dossier');
+  }
+};
 
 const handleAddWord = async () => {
-  if (!currentDossier) {
-    alert("Veuillez d'abord sélectionner ou créer un dossier (champ Dossier).");
+  if (!currentDossier || !userId) {
+    alert("Veuillez d'abord sélectionner ou créer un dossier.");
     return;
   }
+  
   const term = motInput.trim();
   if (!term) return;
 
   setLoading(true);
 
-  // 1. Recherche définition FR en parallèle
-  const [wiktRes, wikiRes] = await Promise.all([
-    fetchWiktionary(term), 
-    fetchWikipedia(term)
-  ]);
+  try {
+    // Récupérer les définitions (Wikipedia, Wiktionary, etc.)
+    const [wiktRes, wikiRes] = await Promise.all([
+      fetchWiktionary(term), 
+      fetchWikipedia(term)
+    ]);
 
-  const bestDef = wikiRes.text || wiktRes.text || `${term}\n\n(Définition non trouvée - Cliquez sur "Éditer")`;
+    const bestDef = wikiRes.text || wiktRes.text || `${term}\n\n(Définition non trouvée - Cliquez sur "Éditer")`;
 
-  // 2. Traduction de la définition FR→EN (si demandé)
-  let translationDefinition = null;
-  if (includeTranslate && bestDef !== "(Aucune définition trouvée)") {
-    translationDefinition = await fetchTranslateText(bestDef);
-  }
-
-  // 3. Mots proches : traduire terme FR→EN, puis chercher, puis traduire résultats EN→FR
-  let related: string[] = [];
-  if (includeRelated) {
-    // Traduire le terme français en anglais pour Datamuse
-    const termEN = await fetchTranslateText(term); // "montagne" → "mountain"
-    
-    if (termEN) {
-      const relatedEN = await fetchDatamuse(termEN); // cherche avec "mountain"
-      
-      // Traduire chaque mot proche EN→FR pour les parenthèses
-      related = await Promise.all(
-        relatedEN.map(async (word) => {
-          const miniTrad = await fetchTranslateTextReverse(word); // "mountainside" → "flanc"
-          return `${word} (${miniTrad || '?'})`;
-        })
-      );
+    let translationDefinition = null;
+    if (includeTranslate && bestDef !== "(Aucune définition trouvée)") {
+      translationDefinition = await fetchTranslateText(bestDef);
     }
+
+    let related: string[] = [];
+    if (includeRelated) {
+      const termEN = await fetchTranslateText(term);
+      
+      if (termEN) {
+        const relatedEN = await fetchDatamuse(termEN);
+        
+        related = await Promise.all(
+          relatedEN.map(async (word) => {
+            const miniTrad = await fetchTranslateTextReverse(word);
+            return `${word} (${miniTrad || '?'})`;
+          })
+        );
+      }
+    }
+
+    console.log('💾 Sauvegarde du mot:', term);
+
+    // Récupérer l'ID du dossier depuis Supabase
+    const { data: dossierData } = await supabase
+      .from('dossiers')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('nom', currentDossier)
+      .single();
+    
+    if (!dossierData) {
+      alert('Dossier introuvable');
+      return;
+    }
+
+    // Sauvegarder dans Supabase
+    const { data: newEntry, error } = await supabase
+      .from('entries')
+      .insert({
+        user_id: userId,
+        dossier_id: dossierData.id,
+        mot: term,
+        definition: bestDef,
+        source: wiktRes.text ? "wiktionary" : wikiRes.text ? "wikipedia" : "manuel",
+        traduction: translationDefinition,
+        mots_proches: related,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('❌ Erreur sauvegarde:', error);
+      alert('Erreur lors de la sauvegarde');
+      return;
+    }
+
+    console.log('✅ Mot sauvegardé:', newEntry);
+
+    // Recharger les données
+    await loadDataFromSupabase();
+
+    setMotInput("");
+  } catch (e) {
+    console.error('❌ Erreur:', e);
+    alert('Erreur lors de l\'ajout du mot');
+  } finally {
+    setLoading(false);
   }
-
-  // 4. Créer l'entrée
-  const newEntry = {
-    id: generateId(),
-    mot: term,
-    definition: bestDef,
-    source: wiktRes.text ? "wiktionary" : wikiRes.text ? "wikipedia" : "manuel",
-    traduction: translationDefinition,
-    motsProches: related,
-    isEditing: false,
-    showDefinition: false,
-  };
-
-  setStore((prev) => {
-    const curr = prev[currentDossier] ?? [];
-    const exists = curr.some((e) => e.mot.toLowerCase() === term.toLowerCase());
-    const updated = exists 
-      ? curr.map((e) => (e.mot.toLowerCase() === term.toLowerCase() ? newEntry : e)) 
-      : [...curr, newEntry];
-    updated.sort((a, b) => a.mot.localeCompare(b.mot, "fr", { sensitivity: "base" }));
-    return { ...prev, [currentDossier]: updated };
-  });
-
-  setMotInput("");
-  setLoading(false);
 };
 
 
@@ -323,14 +428,40 @@ async function fetchTranslateTextReverse(text: string) {
     });
   };
 
-  // save edited definition
-  const saveEditedDefinition = (id: string, newDef: string) => {
-    if (!currentDossier) return;
+  const saveEditedDefinition = async (id: string, newDef: string) => {
+  if (!currentDossier || !userId) return;
+  
+  try {
+    console.log('💾 Sauvegarde de la définition éditée pour:', id);
+    
+    // Mettre à jour dans Supabase
+    const { error } = await supabase
+      .from('entries')
+      .update({ definition: newDef })
+      .eq('id', id)
+      .eq('user_id', userId);
+    
+    if (error) {
+      console.error('❌ Erreur mise à jour:', error);
+      alert('Erreur lors de la sauvegarde');
+      return;
+    }
+    
+    console.log('✅ Définition mise à jour dans Supabase');
+    
+    // Mettre à jour le state local
     setStore((prev) => {
-      const arr = (prev[currentDossier] ?? []).map((e) => (e.id === id ? { ...e, definition: newDef, isEditing: false } : e));
+      const arr = (prev[currentDossier] ?? []).map((e) => 
+        e.id === id ? { ...e, definition: newDef, isEditing: false } : e
+      );
       return { ...prev, [currentDossier]: arr };
     });
-  };
+    
+  } catch (e) {
+    console.error('❌ Erreur:', e);
+    alert('Erreur lors de la sauvegarde');
+  }
+};
 
   // delete entry
   const deleteEntry = (id: string) => {
@@ -350,6 +481,8 @@ async function fetchTranslateTextReverse(text: string) {
   const filteredEntries = entries.filter((e) => e.mot.toLowerCase().includes(filterText.toLowerCase()));
 
   // UI render
+  // TEST : Juste avant le return
+console.log('🔄 Render - userId:', userId, 'showDeleteModal:', showDeleteModal);
   return (
     <div className="min-h-screen bg-sky-900 p-8"
     aria-hidden={showDeleteModal}
@@ -393,19 +526,19 @@ async function fetchTranslateTextReverse(text: string) {
   ))}
 </select>
       
-      {/* Bouton poubelle */}
-      {currentDossier && (
-        <button
-  onClick={() => {
-    setDossierToDelete(currentDossier);
-    setShowDeleteModal(true);
-  }}
-  className="w-9 h-9 rounded-full bg-gradient-to-br from-zinc-100 to-zinc-300 hover:from-rose-500 hover:to-red-200 border border-indigo-300 flex items-center justify-center transition-all duration-300"
-  aria-label={`Supprimer le dossier ${currentDossier}`}
->
-  <span aria-hidden="true">🗑️</span>
-  <span className="sr-only">Supprimer le dossier</span>
-</button>
+    {currentDossier && (
+  <button
+    onClick={() => {
+      console.log('🗑️ Ouverture de la modale pour:', currentDossier);
+      setDossierToDelete(currentDossier);
+      setShowDeleteModal(true);
+    }}
+    className="w-9 h-9 rounded-full bg-gradient-to-br from-zinc-100 to-zinc-300 hover:from-rose-500 hover:to-red-200 border border-indigo-300 flex items-center justify-center transition-all duration-300"
+    aria-label={`Supprimer le dossier ${currentDossier}`}
+  >
+    <span aria-hidden="true">🗑️</span>
+    <span className="sr-only">Supprimer le dossier</span>
+  </button>
       )}
     </div>
   </div>
@@ -610,6 +743,7 @@ async function fetchTranslateTextReverse(text: string) {
               <span lang="fr"> ({frenchPart})</span>
             )}
           </button>
+          
         );
       })}
     </div>
@@ -639,21 +773,55 @@ async function fetchTranslateTextReverse(text: string) {
           Supprimer
         </button>
         <button
-          onClick={async () => {
-            const result = await fetchTranslateText(entry.definition || entry.mot);
-            if (!currentDossier) return;
-            setStore(prev => {
-              const arr = prev[currentDossier]?.map(e =>
-                e.id === entry.id ? { ...e, traduction: result } : e
-              );
-              return { ...prev, [currentDossier]: arr };
-            });
-          }}
-          className="px-4 py-2 bg-sky-100 rounded text-slate-900 hover:bg-sky-200 text-sm whitespace-nowrap w-full lg:w-auto"
-          aria-label={`Traduire ${entry.mot} en anglais`}
-        >
-          Traduire (EN)
-        </button>
+  onClick={async () => {
+    if (!currentDossier || !userId) return;
+    
+    try {
+      console.log('🌐 Traduction en cours...');
+      
+      // Traduire
+      const result = await fetchTranslateText(entry.definition || entry.mot);
+      
+      if (!result) {
+        alert('Erreur lors de la traduction');
+        return;
+      }
+      
+      console.log('✅ Traduction obtenue:', result);
+      
+      // Sauvegarder dans Supabase
+      const { error } = await supabase
+        .from('entries')
+        .update({ traduction: result })
+        .eq('id', entry.id)
+        .eq('user_id', userId);
+      
+      if (error) {
+        console.error('❌ Erreur sauvegarde traduction:', error);
+        alert('Erreur lors de la sauvegarde');
+        return;
+      }
+      
+      console.log('✅ Traduction sauvegardée dans Supabase');
+      
+      // Mettre à jour le state local
+      setStore(prev => {
+        const arr = prev[currentDossier]?.map(e =>
+          e.id === entry.id ? { ...e, traduction: result } : e
+        );
+        return { ...prev, [currentDossier]: arr };
+      });
+      
+    } catch (e) {
+      console.error('❌ Erreur:', e);
+      alert('Erreur lors de la traduction');
+    }
+  }}
+  className="px-4 py-2 bg-sky-100 rounded text-slate-900 hover:bg-sky-200 text-sm whitespace-nowrap w-full lg:w-auto"
+  aria-label={`Traduire ${entry.mot} en anglais`}
+>
+  Traduire (EN)
+</button>
         
         <div className="border-t border-slate-300 my-2"></div>
         
@@ -721,6 +889,8 @@ async function fetchTranslateTextReverse(text: string) {
   }
 `}</style>
 {/* Modale de confirmation de suppression */}
+
+{/* Modale de confirmation de suppression */}
 {showDeleteModal && dossierToDelete && (
   <div 
     className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
@@ -738,7 +908,6 @@ async function fetchTranslateTextReverse(text: string) {
       aria-modal="true"
       aria-labelledby="modal-titre"
       onKeyDown={(e) => {
-        // Piège Tab dans la modale
         if (e.key === 'Tab') {
           const focusableElements = e.currentTarget.querySelectorAll(
             'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
@@ -747,11 +916,9 @@ async function fetchTranslateTextReverse(text: string) {
           const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
 
           if (e.shiftKey && document.activeElement === firstElement) {
-            // Shift+Tab sur premier élément → va au dernier
             e.preventDefault();
             lastElement?.focus();
           } else if (!e.shiftKey && document.activeElement === lastElement) {
-            // Tab sur dernier élément → va au premier
             e.preventDefault();
             firstElement?.focus();
           }
@@ -776,6 +943,7 @@ async function fetchTranslateTextReverse(text: string) {
       </div>
       
       <div className="flex gap-3 mt-6">
+        {/* Bouton Annuler */}
         <button
           onClick={() => {
             setShowDeleteModal(false);
@@ -785,19 +953,66 @@ async function fetchTranslateTextReverse(text: string) {
         >
           Annuler
         </button>
+        
+        {/* Bouton Supprimer */}
         <button
-          onClick={() => {
-            setStore(prev => {
-              const newStore = { ...prev };
-              delete newStore[dossierToDelete];
-              return newStore;
-            });
+          onClick={async () => {
+            console.log('🗑️ Suppression du dossier:', dossierToDelete);
             
-            const remainingDossiers = dossiersList.filter(d => d !== dossierToDelete);
-            setCurrentDossier(remainingDossiers.length > 0 ? remainingDossiers[0] : null);
+            if (!dossierToDelete || !userId) {
+              console.error('❌ Données manquantes');
+              return;
+            }
             
-            setShowDeleteModal(false);
-            setDossierToDelete(null);
+            try {
+              // Récupérer l'ID du dossier
+              const { data: dossierData, error: fetchError } = await supabase
+                .from('dossiers')
+                .select('id')
+                .eq('user_id', userId)
+                .eq('nom', dossierToDelete)
+                .single();
+              
+              if (fetchError || !dossierData) {
+                console.error('❌ Erreur récupération:', fetchError);
+                alert('Dossier introuvable');
+                return;
+              }
+              
+              console.log('📦 ID du dossier:', dossierData.id);
+              
+              // Supprimer de Supabase
+              const { error: deleteError } = await supabase
+                .from('dossiers')
+                .delete()
+                .eq('id', dossierData.id)
+                .eq('user_id', userId);
+              
+              if (deleteError) {
+                console.error('❌ Erreur suppression:', deleteError);
+                alert('Erreur lors de la suppression');
+                return;
+              }
+              
+              console.log('✅ Dossier supprimé');
+              
+              // Fermer la modale
+              setShowDeleteModal(false);
+              setDossierToDelete(null);
+              
+              // Recharger les données
+              await loadDataFromSupabase();
+              
+              // Changer de dossier actuel si nécessaire
+              if (currentDossier === dossierToDelete) {
+                const remainingDossiers = Object.keys(store).filter(d => d !== dossierToDelete);
+                setCurrentDossier(remainingDossiers.length > 0 ? remainingDossiers[0] : null);
+              }
+              
+            } catch (e: any) {
+              console.error('❌ Erreur:', e);
+              alert('Erreur lors de la suppression');
+            }
           }}
           className="flex-1 px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors"
           aria-label={`Confirmer la suppression du dossier ${dossierToDelete}`}
@@ -808,6 +1023,6 @@ async function fetchTranslateTextReverse(text: string) {
     </div>
   </div>
 )}
-    </div>
+</div>
   );
 }
