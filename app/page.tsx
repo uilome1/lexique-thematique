@@ -3,6 +3,9 @@
 import { useEffect, useState, useRef } from "react";
 import { supabase } from '@/lib/supabase';
 import dynamic from 'next/dynamic';
+export default dynamic(() => Promise.resolve(LexiquePage), {
+  ssr: false,
+})
 
 type Entry = {
   id: string;
@@ -39,7 +42,7 @@ function getUserId(): string {
   return newId;
 }
 
-export default function Page() {
+function LexiquePage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [dossierToDelete, setDossierToDelete] = useState<string | null>(null);
   const deleteModalRef = useRef<HTMLDivElement>(null);
