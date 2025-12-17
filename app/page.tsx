@@ -467,13 +467,35 @@ async function fetchTranslateTextReverse(text: string) {
 };
 
   // delete entry
-  const deleteEntry = (id: string) => {
-    if (!currentDossier) return;
-    setStore((prev) => {
-      const arr = (prev[currentDossier] ?? []).filter((e) => e.id !== id);
-      return { ...prev, [currentDossier]: arr };
-    });
-  };
+ const deleteEntry = async (id: string) => {
+  if (!currentDossier || !userId) return;
+  
+  try {
+    console.log('🗑️ Suppression de l\'entrée:', id);
+    
+    // Supprimer de Supabase
+    const { error } = await supabase
+      .from('entries')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId);
+    
+    if (error) {
+      console.error('❌ Erreur suppression:', error);
+      alert('Erreur lors de la suppression');
+      return;
+    }
+    
+    console.log('✅ Entrée supprimée de Supabase');
+    
+    // Recharger les données depuis Supabase
+    await loadDataFromSupabase();
+    
+  } catch (e) {
+    console.error('❌ Erreur:', e);
+    alert('Erreur lors de la suppression');
+  }
+};
 
   // insert related word into form and auto-search (fill motInput but don't auto-add)
   const insertRelated = (word: string) => {
