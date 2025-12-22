@@ -70,6 +70,13 @@ function LexiquePage() {
   if (id) setUserId(id);
 }, []);
 
+  // NOUVEAU : Charger les données depuis Supabase
+  useEffect(() => {
+    if (!userId) return;
+    
+    loadDataFromSupabase();
+  }, [userId]);
+
   async function loadDataFromSupabase() {
   if (!userId) return;
   
