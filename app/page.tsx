@@ -70,68 +70,64 @@ function LexiquePage() {
   if (id) setUserId(id);
 }, []);
 
-  // NOUVEAU : Charger les données depuis Supabase
-  useEffect(() => {
-    if (!userId) return;
-    
-    loadDataFromSupabase();
-  }, [userId]);
-
   async function loadDataFromSupabase() {
-    if (!userId) return;
+  if (!userId) return;
+  
+  try {
+    console.log('📥 Chargement depuis Supabase...');
     
-    try {
-      console.log('📥 Chargement depuis Supabase...');
+    // Charger tous les dossiers (triés alphabétiquement)
+    const { data: dossiers, error: dossiersError } = await supabase
+      .from('dossiers')
+      .select('*')
+      .eq('user_id', userId)
+      .order('nom', { ascending: true }); // 👈 TRI DES DOSSIERS
+    
+    if (dossiersError) throw dossiersError;
+    
+    // Charger toutes les entries (triées alphabétiquement)
+    const { data: entries, error: entriesError } = await supabase
+      .from('entries')
+      .select('*')
+      .eq('user_id', userId)
+      .order('mot', { ascending: true }); // 👈 TRI DES MOTS
+    
+    if (entriesError) throw entriesError;
+    
+    // Organiser les données par dossier
+    const newStore: Record<string, Entry[]> = {};
+    
+    dossiers?.forEach(d => {
+      const dossierId = d.id;
+      const dossierEntries = entries
+        ?.filter(e => e.dossier_id === dossierId)
+        // Pas besoin de re-trier ici car déjà trié par la requête
+        .map(e => ({
+          id: e.id,
+          mot: e.mot,
+          definition: e.definition,
+          source: e.source,
+          traduction: e.traduction,
+          motsProches: e.mots_proches || [],
+          isEditing: false,
+          showDefinition: false,
+        })) || [];
       
-      // Charger tous les dossiers
-      const { data: dossiers, error: dossiersError } = await supabase
-        .from('dossiers')
-        .select('*')
-        .eq('user_id', userId);
-      
-      if (dossiersError) throw dossiersError;
-      
-      // Charger toutes les entries
-      const { data: entries, error: entriesError } = await supabase
-        .from('entries')
-        .select('*')
-        .eq('user_id', userId);
-      
-      if (entriesError) throw entriesError;
-      
-      // Organiser les données par dossier
-      const newStore: Record<string, Entry[]> = {};
-      
-      dossiers?.forEach(d => {
-        const dossierId = d.id;
-        const dossierEntries = entries
-          ?.filter(e => e.dossier_id === dossierId)
-          .map(e => ({
-            id: e.id,
-            mot: e.mot,
-            definition: e.definition,
-            source: e.source,
-            traduction: e.traduction,
-            motsProches: e.mots_proches || [],
-            isEditing: false,
-            showDefinition: false,
-          })) || [];
-        
-        newStore[d.nom] = dossierEntries;
-      });
-      
-      setStore(newStore);
-      setDossiersList(Object.keys(newStore));
-      console.log('📋 dossiersList mis à jour:', Object.keys(newStore));
-      if (Object.keys(newStore).length > 0 && !currentDossier) {
-        setCurrentDossier(Object.keys(newStore)[0]);
-      }
-      
-      console.log('✅ Données chargées:', Object.keys(newStore).length, 'dossiers');
-    } catch (e) {
-      console.error('❌ Erreur chargement Supabase:', e);
+      newStore[d.nom] = dossierEntries;
+    });
+    
+    setStore(newStore);
+    setDossiersList(Object.keys(newStore));
+    console.log('📋 dossiersList mis à jour:', Object.keys(newStore));
+    if (Object.keys(newStore).length > 0 && !currentDossier) {
+      setCurrentDossier(Object.keys(newStore)[0]);
     }
+    
+    console.log('✅ Données chargées:', Object.keys(newStore).length, 'dossiers');
+  } catch (e) {
+    console.error('❌ Erreur chargement Supabase:', e);
   }
+}
 // Fermer la modale avec la touche Échap
 useEffect(() => {
   const handleEsc = (e: KeyboardEvent) => {
