@@ -4,7 +4,7 @@ import { frFR } from '@clerk/localizations';
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Lexique Thématique",
+  title: "Lexique Thematique",
   description: "Mon lexique personnel",
 };
 
