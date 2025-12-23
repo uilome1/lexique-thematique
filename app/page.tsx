@@ -1,5 +1,5 @@
 "use client";
-
+import { useUser, SignInButton, UserButton } from "@clerk/nextjs";
 import { useEffect, useState, useRef } from "react";
 import { supabase } from '@/lib/supabase';
 import dynamic from 'next/dynamic';
@@ -26,28 +26,14 @@ function generateId() {
   }
   return Math.random().toString(36).slice(2, 9);
 }
-// Fonction pour obtenir/créer le user_id
-function getUserId(): string {
-  if (typeof window === 'undefined') return '';
-  
-  const existingId = localStorage.getItem('user_session_id');
-  
-  if (existingId) {
-    return existingId;
-  }
-  
-  const newId = generateId();
-  localStorage.setItem('user_session_id', newId);
-  console.log('📝 Nouvel ID utilisateur créé:', newId);
-  return newId;
-}
+
 
 function LexiquePage() {
+  const { user, isLoaded } = useUser();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [dossierToDelete, setDossierToDelete] = useState<string | null>(null);
   const deleteModalRef = useRef<HTMLDivElement>(null);
-  const [userId, setUserId] = useState<string>('');
-  // dossier management
+    // dossier management
   const [dossierInput, setDossierInput] = useState("");
   const [currentDossier, setCurrentDossier] = useState<string | null>(null);
   const [dossiersList, setDossiersList] = useState<string[]>([]);
@@ -65,20 +51,15 @@ function LexiquePage() {
   const [filterText, setFilterText] = useState("");
 
   // NOUVEAU : Initialiser le userId au chargement
-  useEffect(() => {
-  const id = getUserId();
-  if (id) setUserId(id);
-}, []);
+ // ✅ NOUVEAU : Charger avec l'utilisateur Clerk
+useEffect(() => {
+  if (!isLoaded) return; // Attendre que Clerk charge
+  if (!user) return; // Si pas connecté, ne rien faire
+  
+  loadDataFromSupabase(user.id); // Utiliser l'ID de Clerk
+}, [user, isLoaded]);
 
-  // NOUVEAU : Charger les données depuis Supabase
-  useEffect(() => {
-    if (!userId) return;
-    
-    loadDataFromSupabase();
-  }, [userId]);
-
-  async function loadDataFromSupabase() {
-  if (!userId) return;
+  async function loadDataFromSupabase(userId: string) {
   
   try {
     console.log('📥 Chargement depuis Supabase...');
@@ -263,7 +244,7 @@ async function fetchWiktionary(term: string) {
 
   const handleCreateOrSelectDossier = async () => {
   const d = dossierInput.trim();
-  if (!d || !userId) return;
+  if (!d || !user?.id) return;
   
   try {
     // Vérifier si le dossier existe déjà localement
@@ -279,7 +260,7 @@ async function fetchWiktionary(term: string) {
     const { data, error } = await supabase
       .from('dossiers')
       .insert({
-        user_id: userId,
+        user_id: user?.id,
         nom: d
       })
       .select()
@@ -299,7 +280,7 @@ async function fetchWiktionary(term: string) {
     setDossierInput("");
     
     // Recharger depuis Supabase pour être sûr
-    await loadDataFromSupabase();
+    await loadDataFromSupabase(user.id);
     
   } catch (e) {
     console.error('❌ Erreur:', e);
@@ -308,7 +289,7 @@ async function fetchWiktionary(term: string) {
 };
 
 const handleAddWord = async () => {
-  if (!currentDossier || !userId) {
+  if (!currentDossier || !user?.id) {
     alert("Veuillez d'abord sélectionner ou créer un dossier.");
     return;
   }
@@ -354,7 +335,7 @@ const handleAddWord = async () => {
     const { data: dossierData } = await supabase
       .from('dossiers')
       .select('id')
-      .eq('user_id', userId)
+      .eq('user_id', user?.id)
       .eq('nom', currentDossier)
       .single();
     
@@ -367,7 +348,7 @@ const handleAddWord = async () => {
     const { data: newEntry, error } = await supabase
       .from('entries')
       .insert({
-        user_id: userId,
+        user_id: user?.id,
         dossier_id: dossierData.id,
         mot: term,
         definition: bestDef,
@@ -387,7 +368,7 @@ const handleAddWord = async () => {
     console.log('✅ Mot sauvegardé:', newEntry);
 
     // Recharger les données
-    await loadDataFromSupabase();
+   await loadDataFromSupabase(user.id);
 
     setMotInput("");
   } catch (e) {
@@ -435,7 +416,7 @@ async function fetchTranslateTextReverse(text: string) {
   };
 
   const saveEditedDefinition = async (id: string, newDef: string) => {
-  if (!currentDossier || !userId) return;
+  if (!currentDossier || !user?.id) return;
   
   try {
     console.log('💾 Sauvegarde de la définition éditée pour:', id);
@@ -445,7 +426,7 @@ async function fetchTranslateTextReverse(text: string) {
       .from('entries')
       .update({ definition: newDef })
       .eq('id', id)
-      .eq('user_id', userId);
+      .eq('user_id', user?.id);
     
     if (error) {
       console.error('❌ Erreur mise à jour:', error);
@@ -471,7 +452,7 @@ async function fetchTranslateTextReverse(text: string) {
 
   // delete entry
  const deleteEntry = async (id: string) => {
-  if (!currentDossier || !userId) return;
+  if (!currentDossier || !user?.id) return;
   
   try {
     console.log('🗑️ Suppression de l\'entrée:', id);
@@ -481,7 +462,7 @@ async function fetchTranslateTextReverse(text: string) {
       .from('entries')
       .delete()
       .eq('id', id)
-      .eq('user_id', userId);
+      .eq('user_id', user?.id);
     
     if (error) {
       console.error('❌ Erreur suppression:', error);
@@ -492,7 +473,7 @@ async function fetchTranslateTextReverse(text: string) {
     console.log('✅ Entrée supprimée de Supabase');
     
     // Recharger les données depuis Supabase
-    await loadDataFromSupabase();
+   await loadDataFromSupabase(user.id);
     
   } catch (e) {
     console.error('❌ Erreur:', e);
@@ -508,13 +489,59 @@ async function fetchTranslateTextReverse(text: string) {
   // filter entries by filterText
   const filteredEntries = entries.filter((e) => e.mot.toLowerCase().includes(filterText.toLowerCase()));
 
-  // UI render
-  // TEST : Juste avant le return
-console.log('🔄 Render - userId:', userId, 'showDeleteModal:', showDeleteModal);
+
+  
+  // Chargement
+  if (!isLoaded) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Pas connecté
+  if (!user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <div className="text-center max-w-md px-6">
+          <h1 className="text-4xl font-bold text-slate-900 mb-4">
+            📚 Lexique Thématique
+          </h1>
+          <p className="text-gray-600 mb-8">
+            Créez et organisez votre lexique personnel.
+          </p>
+          <SignInButton mode="modal">
+            <button className="px-8 py-3 bg-sky-500 text-white rounded-lg font-semibold hover:bg-sky-600">
+              Se connecter
+            </button>
+          </SignInButton>
+        </div>
+      </div>
+    );
+  }
+
+console.log('🔄 Render - user:', user?.id, 'showDeleteModal:', showDeleteModal);
+
   return (
+  
     <div className="min-h-screen bg-sky-900 p-8"
     aria-hidden={showDeleteModal}
     >
+      <header className="bg-white rounded-lg px-6 py-4 mb-6 max-w-6xl mx-auto">
+      <div className="flex justify-between items-center">
+        <h1 className="text-xl font-bold text-slate-900">📚 Mon Lexique</h1>
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-gray-600">
+            {user.emailAddresses[0].emailAddress}
+          </span>
+          <UserButton afterSignOutUrl="/" />
+        </div>
+      </div>
+    </header>
       <main className="bg-sky-900 max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
 
         {/* LEFT: dossier + form */}
@@ -801,8 +828,8 @@ console.log('🔄 Render - userId:', userId, 'showDeleteModal:', showDeleteModal
           Supprimer
         </button>
         <button
-  onClick={async () => {
-    if (!currentDossier || !userId) return;
+ onClick={async () => {
+  if (!currentDossier || !user?.id) return;
     
     try {
       console.log('🌐 Traduction en cours...');
@@ -822,7 +849,7 @@ console.log('🔄 Render - userId:', userId, 'showDeleteModal:', showDeleteModal
         .from('entries')
         .update({ traduction: result })
         .eq('id', entry.id)
-        .eq('user_id', userId);
+        .eq('user_id', user?.id);
       
       if (error) {
         console.error('❌ Erreur sauvegarde traduction:', error);
@@ -987,7 +1014,7 @@ console.log('🔄 Render - userId:', userId, 'showDeleteModal:', showDeleteModal
           onClick={async () => {
             console.log('🗑️ Suppression du dossier:', dossierToDelete);
             
-            if (!dossierToDelete || !userId) {
+            if (!dossierToDelete || !user?.id) {
               console.error('❌ Données manquantes');
               return;
             }
@@ -997,7 +1024,7 @@ console.log('🔄 Render - userId:', userId, 'showDeleteModal:', showDeleteModal
               const { data: dossierData, error: fetchError } = await supabase
                 .from('dossiers')
                 .select('id')
-                .eq('user_id', userId)
+                .eq('user_id', user?.id)
                 .eq('nom', dossierToDelete)
                 .single();
               
@@ -1014,7 +1041,7 @@ console.log('🔄 Render - userId:', userId, 'showDeleteModal:', showDeleteModal
                 .from('dossiers')
                 .delete()
                 .eq('id', dossierData.id)
-                .eq('user_id', userId);
+                .eq('user_id', user?.id);
               
               if (deleteError) {
                 console.error('❌ Erreur suppression:', deleteError);
@@ -1029,7 +1056,7 @@ console.log('🔄 Render - userId:', userId, 'showDeleteModal:', showDeleteModal
               setDossierToDelete(null);
               
               // Recharger les données
-              await loadDataFromSupabase();
+              await loadDataFromSupabase(user.id);
               
               // Changer de dossier actuel si nécessaire
               if (currentDossier === dossierToDelete) {
