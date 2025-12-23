@@ -42,42 +42,41 @@ function LexiquePage() {
   // NOUVEAU : Initialiser le userId au chargement
  // ✅ NOUVEAU : Charger avec l'utilisateur Clerk
 useEffect(() => {
-  if (!isLoaded || !user) return;
+  if (isLoaded && user?.id) {
+    loadDataFromSupabase(user.id);
+  }
+  // On ignore le warning ici car on veut que ça ne se lance qu'une fois au login
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [isLoaded, user?.id]);
 
-  loadDataFromSupabase(user.id);
-}, [user, isLoaded, loadDataFromSupabase]);
-
-  async function loadDataFromSupabase(userId: string) {
-  
+const loadDataFromSupabase = useCallback(async (userId: string) => {
   try {
     console.log('📥 Chargement depuis Supabase...');
     
-    // Charger tous les dossiers (triés alphabétiquement)
+    // Charger tous les dossiers
     const { data: dossiers, error: dossiersError } = await supabase
       .from('dossiers')
       .select('*')
       .eq('user_id', userId)
-      .order('nom', { ascending: true }); // 👈 TRI DES DOSSIERS
+      .order('nom', { ascending: true });
     
     if (dossiersError) throw dossiersError;
     
-    // Charger toutes les entries (triées alphabétiquement)
+    // Charger toutes les entries
     const { data: entries, error: entriesError } = await supabase
       .from('entries')
       .select('*')
       .eq('user_id', userId)
-      .order('mot', { ascending: true }); // 👈 TRI DES MOTS
+      .order('mot', { ascending: true });
     
     if (entriesError) throw entriesError;
     
-    // Organiser les données par dossier
     const newStore: Record<string, Entry[]> = {};
     
     dossiers?.forEach(d => {
       const dossierId = d.id;
       const dossierEntries = entries
         ?.filter(e => e.dossier_id === dossierId)
-        // Pas besoin de re-trier ici car déjà trié par la requête
         .map(e => ({
           id: e.id,
           mot: e.mot,
@@ -94,16 +93,23 @@ useEffect(() => {
     
     setStore(newStore);
     setDossiersList(Object.keys(newStore));
-    console.log('📋 dossiersList mis à jour:', Object.keys(newStore));
-    if (Object.keys(newStore).length > 0 && !currentDossier) {
-      setCurrentDossier(Object.keys(newStore)[0]);
-    }
     
-    console.log('✅ Données chargées:', Object.keys(newStore).length, 'dossiers');
+    // Note: currentDossier doit être dans les dépendances si utilisé ici, 
+    // ou utilisé via un setter fonctionnel pour éviter les warnings.
+    setCurrentDossier((prev) => {
+      if (!prev && Object.keys(newStore).length > 0) {
+        return Object.keys(newStore)[0];
+      }
+      return prev;
+    });
+
+    console.log('✅ Données chargées');
   } catch (e) {
-    console.error('❌ Erreur chargement Supabase:', e);
+    console.error('❌ Erreur:', e);
   }
-}
+// IMPORTANT : On laisse le tableau vide [] pour que la fonction soit créée UNE SEULE FOIS
+}, []);
+
 // Fermer la modale avec la touche Échap
 useEffect(() => {
   const handleEsc = (e: KeyboardEvent) => {
