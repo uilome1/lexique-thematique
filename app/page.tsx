@@ -17,17 +17,6 @@ type Entry = {
   isEditing?: boolean;
   showDefinition?: boolean;
 };
-
-const LS_KEY = "lexique_by_dossier_v1";
-
-function generateId() {
-  if (typeof crypto !== "undefined" && typeof (crypto as any).randomUUID === "function") {
-    return (crypto as any).randomUUID();
-  }
-  return Math.random().toString(36).slice(2, 9);
-}
-
-
 function LexiquePage() {
   const { user, isLoaded } = useUser();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -989,7 +978,7 @@ console.log('🔄 Render - user:', user?.id, 'showDeleteModal:', showDeleteModal
             Supprimer le dossier ?
           </h3>
           <p className="text-slate-600 mb-1">
-            Voulez-vous vraiment supprimer le dossier <strong className="text-slate-900">"{dossierToDelete}"</strong> ?
+            Voulez-vous vraiment supprimer le dossier <strong className="text-slate-900">&quot;{dossierToDelete}&quot;</strong> ?
           </p>
           <p className="text-sm text-rose-600">
             Cette action est irréversible. Toutes les entrées seront définitivement perdues.
@@ -1064,7 +1053,7 @@ console.log('🔄 Render - user:', user?.id, 'showDeleteModal:', showDeleteModal
                 setCurrentDossier(remainingDossiers.length > 0 ? remainingDossiers[0] : null);
               }
               
-            } catch (e: any) {
+            } catch (e: unknown) {
               console.error('❌ Erreur:', e);
               alert('Erreur lors de la suppression');
             }
