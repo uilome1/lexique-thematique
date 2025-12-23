@@ -1,6 +1,6 @@
 "use client";
 import { useUser, SignInButton, UserButton } from "@clerk/nextjs";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from '@/lib/supabase';
 import dynamic from 'next/dynamic';
 export default dynamic(() => Promise.resolve(LexiquePage), {
@@ -42,11 +42,10 @@ function LexiquePage() {
   // NOUVEAU : Initialiser le userId au chargement
  // ✅ NOUVEAU : Charger avec l'utilisateur Clerk
 useEffect(() => {
-  if (!isLoaded) return; // Attendre que Clerk charge
-  if (!user) return; // Si pas connecté, ne rien faire
-  
-  loadDataFromSupabase(user.id); // Utiliser l'ID de Clerk
-}, [user, isLoaded]);
+  if (!isLoaded || !user) return;
+
+  loadDataFromSupabase(user.id);
+}, [user, isLoaded, loadDataFromSupabase]);
 
   async function loadDataFromSupabase(userId: string) {
   
@@ -202,18 +201,23 @@ async function fetchWiktionary(term: string) {
 }
 
   async function fetchDatamuse(term: string) {
-    try {
-      const url = `https://api.datamuse.com/words?ml=${encodeURIComponent(term)}&lc=fr&max=8`;
-      const res = await fetch(url);
-      if (!res.ok) return [];
-      const j = await res.json();
-      if (!Array.isArray(j)) return [];
-      return j.map((it: any) => it.word).slice(0, 8);
-    } catch (e) {
-      console.warn("datamuse err", e);
-      return [];
-    }
+  try {
+    const url = `https://api.datamuse.com/words?ml=${encodeURIComponent(term)}&lc=fr&max=8`;
+    const res = await fetch(url);
+    if (!res.ok) return [];
+    
+    // On définit le type attendu de l'API (un tableau d'objets avec 'word')
+    const j = (await res.json()) as { word: string }[];
+    
+    if (!Array.isArray(j)) return [];
+    
+    // Plus besoin de "any" ici, TypeScript sait que "it" a une propriété "word"
+    return j.map((it) => it.word).slice(0, 8);
+  } catch (e) {
+    console.warn("datamuse err", e);
+    return [];
   }
+}
 
   async function fetchTranslateText(text: string) {
     try {

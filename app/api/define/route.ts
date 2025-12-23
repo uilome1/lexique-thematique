@@ -121,7 +121,7 @@ export async function POST(req: Request) {
     if (en) return NextResponse.json(en);
 
     return NextResponse.json({ error: "no-definition-found" });
-  } catch (err) {
+  } catch {
     return NextResponse.json({ error: "server-error" });
   }
 }

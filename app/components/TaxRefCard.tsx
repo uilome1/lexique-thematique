@@ -1,4 +1,21 @@
-export default function TaxRefCard({ data }: { data: any }) {
+// 1. On définit précisément la structure attendue
+interface TaxRefData {
+  scientificName: string;
+  vernacularName?: string; // le '?' car il peut être absent
+  rank: string;
+  classification: {
+    kingdom: string;
+    phylum: string;
+    class: string;
+    order: string;
+    family: string;
+    genus: string;
+    species: string;
+  };
+}
+
+// 2. On applique l'interface au composant
+export default function TaxRefCard({ data }: { data: TaxRefData }) {
   if (!data) return null;
 
   return (

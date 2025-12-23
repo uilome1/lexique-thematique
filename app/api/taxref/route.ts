@@ -39,7 +39,7 @@ export async function GET(req: Request) {
     };
 
     return NextResponse.json(cleaned);
-  } catch (err) {
+  } catch {
     return NextResponse.json(
       { erreur: "Erreur lors de l'appel GBIF" },
       { status: 500 }
